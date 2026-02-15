@@ -18,6 +18,11 @@ class Project(models.Model):
 
 class Place(models.Model):
     """Place in a travel project"""
+    IS_VISITED_CHOICES = [
+        ('visited', 'Visited'),
+        ('not_visited', 'Not Visited'),
+        ('planning', 'Planning to Visit'),
+    ]
     project = models.ForeignKey(
         Project,
         on_delete=models.CASCADE,
@@ -25,7 +30,7 @@ class Place(models.Model):
     )
     place_id = models.CharField(max_length=255)
     notes = models.TextField(blank=True)
-    is_visited = models.BooleanField(default=False)
+    is_visited = models.CharField(choices=IS_VISITED_CHOICES, max_length=50, default= 'not_visited')
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

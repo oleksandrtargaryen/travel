@@ -1,5 +1,9 @@
 # Create your views here.
-from rest_framework import viewsets
+from drf_yasg.openapi import Response
+from rest_framework import viewsets, status
+from rest_framework.decorators import action
+from django.db.models import Q
+
 from .models import Project, Place
 from .serializers import ProjectSerializer, PlaceSerializer
 
@@ -12,9 +16,22 @@ class ProjectViewSet(viewsets.ModelViewSet):
     PUT /api/projects/1/ - оновити повністю
     PATCH /api/projects/1/ - оновити частково
     DELETE /api/projects/1/ - видалити
+    GET /api/projects/search/?q=<text> - пошук по name та description
     """
-    queryset = Project.objects.all()
+    queryset = Project.objects.prefetch_related('places')
     serializer_class = ProjectSerializer
+    @action(detail=False, methods=['get'])
+    def search(self, request):
+        query = request.query_params.get('q')
+        if not query:
+            return Response("bad request", status=status.HTTP_400_BAD_REQUEST)
+
+        projects = Project.objects.filter(
+            Q(name__icontains=query) |
+            Q(description__icontains=query))
+        serializer = self.get_serializer(projects, many=True)
+        return Response(serializer.data)
+
 
 
 class PlaceViewSet(viewsets.ModelViewSet):
@@ -27,11 +44,11 @@ class PlaceViewSet(viewsets.ModelViewSet):
     PATCH /api/places/1/ - оновити частково (mark visited)
     DELETE /api/places/1/ - видалити
     """
-    queryset = Place.objects.all()
+    queryset = Place.objects.prefetch_related('project')
     serializer_class = PlaceSerializer
     
     def get_queryset(self):
-        queryset = Place.objects.all()
+        queryset = super().get_queryset()
         project_id = self.request.query_params.get('project')
         if project_id:
             queryset = queryset.filter(project_id=project_id)
