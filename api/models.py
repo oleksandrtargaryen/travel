@@ -59,7 +59,7 @@ class Place(models.Model):
         blank=True,
         related_name='places'
     )
-    google_place_id = models.CharField(max_length=255, unique=True)
+    google_place_id = models.CharField(max_length=255, unique=True, default=None)
     notes = models.TextField(blank=True)
     is_visited = models.CharField(choices=IS_VISITED_CHOICES, max_length=50, default= 'not_visited')
     created_at = models.DateTimeField(auto_now_add=True)

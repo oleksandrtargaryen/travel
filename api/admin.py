@@ -11,6 +11,6 @@ class ProjectAdmin(admin.ModelAdmin):
 
 @admin.register(Place)
 class PlaceAdmin(admin.ModelAdmin):
-    list_display = ['project', 'place_id', 'is_visited', 'created_at']
+    list_display = ['project', 'id', 'is_visited', 'created_at']
     list_filter = ['is_visited', 'created_at']
-    search_fields = ['place_id', 'notes']
+    search_fields = ['id', 'notes']
