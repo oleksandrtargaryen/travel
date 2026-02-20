@@ -5,7 +5,7 @@ from .models import Project, Place
 class PlaceSerializer(serializers.ModelSerializer):
     class Meta:
         model = Place
-        fields = ['id', 'place_id', 'notes', 'is_visited', 'created_at']
+        fields = ['id', 'google_place_id', 'notes', 'is_visited', 'created_at']
         read_only_fields = ['id', 'created_at']
 
 
