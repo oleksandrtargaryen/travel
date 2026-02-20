@@ -1,49 +1,58 @@
 import httpx
 import os
+from typing import Optional, Dict, Any
 
 GOOGLE_PLACES_API_KEY = os.environ.get('GOOGLE_API_KEY')
 OPEN_WEATHER_API_KEY = os.environ.get('OPEN_WEATHER_API_KEY')
 
+
 class GooglePlacesOpenWeatherService:
+    GOOGLE_BASE_URL = "https://maps.googleapis.com/maps/api/place/details/json"
+    WEATHER_BASE_URL = "https://api.openweathermap.org/data/2.5/weather"
 
     @staticmethod
-    async  def async_get_google_place(google_place_id: int) -> dict:
+    async def get_place_with_weather(place_id: str) -> Dict[str, Any]:
         async with httpx.AsyncClient() as client:
-            place_response = await client.get(
-                "https://www.google.com/maps/api/place/details/json",
+            place_res = await client.get(
+                GooglePlacesOpenWeatherService.GOOGLE_BASE_URL,
                 params={
-                    "place_id": google_place_id,
+                    "place_id": place_id,
                     "fields": "name,geometry,formatted_address,rating",
                     "key": GOOGLE_PLACES_API_KEY,
                 },
             )
-            place_response.raise_for_status()
-            place_data = place_response.json()["place_data"]
-            lat = place_data["geometry"]["location"]["lat"]
-            lng = place_data["geometry"]["location"]["lng"]
+            place_res.raise_for_status()
+            place_json = place_res.json()
 
-            weather_response = await client.get(
-                "https://api.openweathermap.org/data/2.5/weather",
+            if place_json.get("status") != "OK":
+                raise ValueError(f"Google API Error: {place_json.get('status')}")
+
+            result = place_json["result"]
+            loc = result["geometry"]["location"]
+            lat, lng = loc["lat"], loc["lng"]
+
+            weather_res = await client.get(
+                GooglePlacesOpenWeatherService.WEATHER_BASE_URL,
                 params={
                     "lat": lat,
                     "lon": lng,
                     "appid": OPEN_WEATHER_API_KEY,
-                    'units': 'metric',
-
+                    "units": "metric",
                 },
             )
-            weather_response.raise_for_status()
-            weather_data = weather_response.json()["weather_data"]
+            weather_res.raise_for_status()
+            w_data = weather_res.json()
 
             return {
-                "name": place_data["name"],
-                "adress": place_data["formatted_address"],
-                "rating": place_data.get("rating", None),
+                "name": result.get("name"),
+                "address": result.get("formatted_address"),
+                "rating": result.get("rating"),
                 "lat": lat,
                 "lng": lng,
-                "temp": weather_data["main"]["temp"],
-                "feels_like": weather_data["main"]["feels_like"],
-                "humidity": weather_data["main"]["humidity"],
-                "description": weather_data["weather"][0]["description"],
+                "weather": {
+                    "temp": w_data["main"]["temp"],
+                    "feels_like": w_data["main"]["feels_like"],
+                    "humidity": w_data["main"]["humidity"],
+                    "description": w_data["weather"][0]["description"],
+                }
             }
-
