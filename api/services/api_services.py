@@ -1,6 +1,6 @@
 import httpx
 import os
-from typing import Optional, Dict, Any
+from typing import Dict, Any
 
 GOOGLE_PLACES_API_KEY = os.environ.get('GOOGLE_API_KEY')
 OPEN_WEATHER_API_KEY = os.environ.get('OPEN_WEATHER_API_KEY')
@@ -12,16 +12,23 @@ class GooglePlacesOpenWeatherService:
 
     @staticmethod
     async def get_place_with_weather(place_id: str) -> Dict[str, Any]:
+        if not GOOGLE_PLACES_API_KEY or not OPEN_WEATHER_API_KEY:
+            raise ValueError("API keys are not configured")
+
         async with httpx.AsyncClient() as client:
-            place_res = await client.get(
-                GooglePlacesOpenWeatherService.GOOGLE_BASE_URL,
-                params={
-                    "place_id": place_id,
-                    "fields": "name,geometry,formatted_address,rating",
-                    "key": GOOGLE_PLACES_API_KEY,
-                },
-            )
-            place_res.raise_for_status()
+            try:
+                place_res = await client.get(
+                    GooglePlacesOpenWeatherService.GOOGLE_BASE_URL,
+                    params={
+                        "place_id": place_id,
+                        "fields": "name,geometry,formatted_address,rating",
+                        "key": GOOGLE_PLACES_API_KEY,
+                    },
+                )
+                place_res.raise_for_status()
+            except httpx.HTTPStatusError as e:
+                raise ValueError(f"Google Places request failed: {e.response.status_code}")
+
             place_json = place_res.json()
 
             if place_json.get("status") != "OK":
@@ -31,16 +38,20 @@ class GooglePlacesOpenWeatherService:
             loc = result["geometry"]["location"]
             lat, lng = loc["lat"], loc["lng"]
 
-            weather_res = await client.get(
-                GooglePlacesOpenWeatherService.WEATHER_BASE_URL,
-                params={
-                    "lat": lat,
-                    "lon": lng,
-                    "appid": OPEN_WEATHER_API_KEY,
-                    "units": "metric",
-                },
-            )
-            weather_res.raise_for_status()
+            try:
+                weather_res = await client.get(
+                    GooglePlacesOpenWeatherService.WEATHER_BASE_URL,
+                    params={
+                        "lat": lat,
+                        "lon": lng,
+                        "appid": OPEN_WEATHER_API_KEY,
+                        "units": "metric",
+                    },
+                )
+                weather_res.raise_for_status()
+            except httpx.HTTPStatusError as e:
+                raise ValueError(f"OpenWeather request failed: {e.response.status_code}")
+
             w_data = weather_res.json()
 
             return {

@@ -1,8 +1,6 @@
-# Create your views here.
-import asyncio
-from drf_yasg.openapi import Response
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
+from rest_framework.response import Response
 from django.db.models import Q
 
 from .models import Project, Place
@@ -21,6 +19,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
     """
     queryset = Project.objects.prefetch_related('places')
     serializer_class = ProjectSerializer
+
     @action(detail=False, methods=['get'])
     def search(self, request):
         query = request.query_params.get('q')
@@ -29,11 +28,11 @@ class ProjectViewSet(viewsets.ModelViewSet):
 
         projects = Project.objects.filter(
             Q(name__icontains=query) |
-            Q(description__icontains=query))
+            Q(description__icontains=query)
+        )
 
         serializer = self.get_serializer(projects, many=True)
         return Response(serializer.data)
-
 
 
 class PlaceViewSet(viewsets.ModelViewSet):
@@ -48,7 +47,7 @@ class PlaceViewSet(viewsets.ModelViewSet):
     """
     queryset = Place.objects.prefetch_related('project')
     serializer_class = PlaceSerializer
-    
+
     def get_queryset(self):
         queryset = super().get_queryset()
         project_id = self.request.query_params.get('project')
@@ -57,7 +56,13 @@ class PlaceViewSet(viewsets.ModelViewSet):
         return queryset
 
     @action(detail=True, methods=['get'])
-    def get_weather(self, place_id, pk = None):
-        google_place = self.get_object()
-        result = asyncio.run(GooglePlacesOpenWeatherService.async_get_google_place(google_place.google_place_id))
+    def get_weather(self, request, pk=None):
+        place = self.get_object()
+        import asyncio
+        try:
+            result = asyncio.run(
+                GooglePlacesOpenWeatherService.get_place_with_weather(place.google_place_id)
+            )
+        except ValueError as e:
+            return Response({"error": str(e)}, status=status.HTTP_502_BAD_GATEWAY)
         return Response(result, status=status.HTTP_200_OK)

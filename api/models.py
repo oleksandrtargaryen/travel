@@ -1,7 +1,5 @@
 from django.db import models
 
-# Create your models here.
-
 
 class Country(models.Model):
     name = models.CharField(max_length=100, unique=True)
@@ -61,8 +59,8 @@ class Place(models.Model):
     )
     google_place_id = models.CharField(max_length=255, unique=True, default=None)
     notes = models.TextField(blank=True)
-    is_visited = models.CharField(choices=IS_VISITED_CHOICES, max_length=50, default= 'not_visited')
+    is_visited = models.CharField(choices=IS_VISITED_CHOICES, max_length=50, default='not_visited')
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.project.name} - {self.place_id}"
+        return f"{self.project.name} - {self.google_place_id}"  # fix: was self.place_id
